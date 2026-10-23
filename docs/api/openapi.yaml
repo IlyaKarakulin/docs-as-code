@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Review Sentiment API
+  description: |
+    API сервиса «Анализатор отзывов». Определяет тональность текстового отзыва
+    (положительная, нейтральная или отрицательная) с помощью ML-модели.
+  version: 1.0.0
+servers:
+  - url: https://example.com/api/v1
+    description: Условный сервер (реальный backend не разворачивается)
+tags:
+  - name: analysis
+    description: Анализ тональности отзывов
+  - name: models
+    description: Информация о моделях
+paths:
+  /analysis:
+    post:
+      tags: [analysis]
+      summary: Определить тональность отзыва
+      description: |
+        Принимает текст отзыва, передаёт его ML-модели и возвращает тональность
+        и уверенность модели. Результат сохраняется и доступен по `id`.
+      operationId: createAnalysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+      responses:
+        '201':
+          description: Анализ выполнен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+        '400':
+          description: Некорректный запрос (пустой или слишком длинный текст)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: INVALID_TEXT
+                message: Text must not be empty
+        '500':
+          description: Внутренняя ошибка сервиса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: INTERNAL_ERROR
+                message: Unexpected error, try again later
+        '503':
+          description: ML-модель временно недоступна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: MODEL_UNAVAILABLE
+                message: Model is temporarily unavailable
+  /analysis/{id}:
+    get:
+      tags: [analysis]
+      summary: Получить результат анализа
+      description: Возвращает ранее сохранённый результат анализа по его идентификатору.
+      operationId: getAnalysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор результата анализа
+          schema:
+            type: integer
+            minimum: 1
+          example: 123
+      responses:
+        '200':
+          description: Результат найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+        '404':
+          description: Результат не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: NOT_FOUND
+                message: Analysis result not found
+  /models:
+    get:
+      tags: [models]
+      summary: Получить список доступных моделей
+      description: Возвращает модели, которые можно использовать для анализа тональности.
+      operationId: listModels
+      responses:
+        '200':
+          description: Список моделей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Model'
+        '500':
+          description: Внутренняя ошибка сервиса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    AnalysisRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          description: Текст отзыва
+          example: Отличный товар, доставили быстро!
+    AnalysisResult:
+      type: object
+      required:
+        - id
+        - sentiment
+        - confidence
+      properties:
+        id:
+          type: integer
+          description: Идентификатор результата анализа
+          example: 123
+        sentiment:
+          type: string
+          enum: [positive, neutral, negative]
+          description: Определённая тональность отзыва
+          example: positive
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Уверенность модели (от 0 до 1)
+          example: 0.94
+        needsReview:
+          type: boolean
+          description: Признак того, что результат требует проверки (уверенность ниже 0.6)
+          example: false
+        modelVersion:
+          type: string
+          description: Версия модели, выполнившей анализ
+          example: sentiment-ru-1.2.0
+        createdAt:
+          type: string
+          format: date-time
+          description: Время выполнения анализа
+          example: '2026-10-23T14:30:00Z'
+    Model:
+      type: object
+      properties:
+        name:
+          type: string
+          example: sentiment-ru
+        version:
+          type: string
+          example: 1.2.0
+        language:
+          type: string
+          example: ru
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: INVALID_TEXT
+        message:
+          type: string
+          example: Text must not be empty

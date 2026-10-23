@@ -5,3 +5,17 @@ theme:
 
 plugins:
   - search
+
+nav:
+  - Главная: index.md
+  - Проект:
+      - Описание: project/overview.md
+      - Требования: project/requirements.md
+      - Диаграммы: project/diagrams.md
+  - API:
+      - Описание: api/index.md
+      - Swagger UI: api/swagger.md
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
